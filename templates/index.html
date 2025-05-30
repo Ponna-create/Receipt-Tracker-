@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="text-center mb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fas fa-camera-retro text-primary me-3"></i>
+                    Receipt Scanner
+                </h1>
+                <p class="lead mb-4">
+                    Turn receipt photos into organized expense reports in seconds
+                </p>
+                <div class="alert alert-info d-inline-block">
+                    <i class="fas fa-clock me-2"></i>
+                    Save 2+ hours weekly on expense tracking
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-upload fa-2x text-primary"></i>
+                        </div>
+                        <h2 class="card-title">Upload Your Receipt</h2>
+                        <p class="text-muted">We'll extract all details automatically using AI</p>
+                    </div>
+
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Email (optional)
+                            </label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="your@email.com">
+                            <div class="form-text">We'll use this to track your receipts</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="receipt" class="form-label">
+                                <i class="fas fa-image me-2"></i>Receipt Photo
+                            </label>
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="receipt" 
+                                   name="receipt" 
+                                   accept="image/*" 
+                                   required>
+                            <div class="form-text">JPG, PNG up to 16MB</div>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-magic me-2"></i>
+                            <span id="btnText">Extract Receipt Data - FREE</span>
+                            <div class="spinner-border spinner-border-sm ms-2 d-none" id="loadingSpinner"></div>
+                        </button>
+                    </form>
+
+                    <!-- Results Display -->
+                    <div id="results" class="mt-4 d-none">
+                        <div class="alert alert-success">
+                            <h5><i class="fas fa-check-circle me-2"></i>Receipt Processed Successfully!</h5>
+                            <div id="extractedData"></div>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div id="error" class="mt-4 d-none">
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Error</h6>
+                            <div id="errorMessage"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">Why Choose Receipt Scanner?</h3>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
+                    <h5>Lightning Fast</h5>
+                    <p class="text-muted">Process receipts in under 10 seconds using advanced OCR and AI</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-brain fa-3x text-info mb-3"></i>
+                    <h5>AI-Powered</h5>
+                    <p class="text-muted">Smart extraction of vendor, amount, date, and category information</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-excel fa-3x text-success mb-3"></i>
+                    <h5>Easy Export</h5>
+                    <p class="text-muted">Download organized expense reports as Excel files for accounting</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const results = document.getElementById('results');
+    const error = document.getElementById('error');
+    const extractedData = document.getElementById('extractedData');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Reset displays
+    results.classList.add('d-none');
+    error.classList.add('d-none');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    btnText.textContent = 'Processing Receipt...';
+    loadingSpinner.classList.remove('d-none');
+    
+    try {
+        const formData = new FormData(this);
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success and extracted data
+            extractedData.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <strong>Vendor:</strong> ${result.data.vendor || 'N/A'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Amount:</strong> $${result.data.amount || '0.00'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Date:</strong> ${result.data.date || 'N/A'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Category:</strong> ${result.data.category || 'N/A'}
+                    </div>
+                    <div class="col-12">
+                        <strong>Tax:</strong> $${result.data.tax || '0.00'}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="${result.redirect}" class="btn btn-success">
+                        <i class="fas fa-chart-line me-2"></i>View Dashboard
+                    </a>
+                </div>
+            `;
+            results.classList.remove('d-none');
+        } else {
+            // Show error
+            errorMessage.textContent = result.error || 'Unknown error occurred';
+            error.classList.remove('d-none');
+        }
+    } catch (err) {
+        // Show network error
+        errorMessage.textContent = 'Network error. Please check your connection and try again.';
+        error.classList.remove('d-none');
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        btnText.textContent = 'Extract Receipt Data - FREE';
+        loadingSpinner.classList.add('d-none');
+    }
+});
+
+// File input validation
+document.getElementById('receipt').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const maxSize = 16 * 1024 * 1024; // 16MB
+        if (file.size > maxSize) {
+            alert('File too large. Please select a file smaller than 16MB.');
+            e.target.value = '';
+        }
+    }
+});
+</script>
+{% endblock %}

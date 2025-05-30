@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Receipt Scanner{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-5">
+                <i class="fas fa-chart-line text-primary me-3"></i>
+                Expense Dashboard
+            </h1>
+            <p class="lead text-muted">{{ user.email }}</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('home') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-plus me-2"></i>Add Receipt
+            </a>
+            {% if receipts %}
+            <a href="{{ url_for('export_data', user_id=user_id) }}" class="btn btn-success">
+                <i class="fas fa-download me-2"></i>Export Excel
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary bg-opacity-10 border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-receipt fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-0">{{ receipts|length }}</h3>
+                    <small class="text-muted">Total Receipts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success bg-opacity-10 border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x text-success mb-2"></i>
+                    <h3 class="mb-0">${{ "%.2f"|format(total_amount) }}</h3>
+                    <small class="text-muted">Total Amount</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning bg-opacity-10 border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-0">${{ "%.2f"|format(total_tax) }}</h3>
+                    <small class="text-muted">Total Tax</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card {% if user.plan == 'free' %}bg-danger bg-opacity-10 border-danger{% else %}bg-info bg-opacity-10 border-info{% endif %}">
+                <div class="card-body text-center">
+                    <i class="fas fa-crown fa-2x {% if user.plan == 'free' %}text-danger{% else %}text-info{% endif %} mb-2"></i>
+                    <h3 class="mb-0">{{ user.plan|title }}</h3>
+                    <small class="text-muted">
+                        {% if user.plan == 'free' %}
+                            {{ user.receipt_count }}/10 used
+                        {% else %}
+                            Unlimited
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Notice for Free Users -->
+    {% if user.plan == 'free' and user.receipt_count >= 8 %}
+    <div class="alert alert-warning" role="alert">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>Approaching Limit</h5>
+        <p class="mb-3">You've used {{ user.receipt_count }} out of 10 free receipts. 
+        Upgrade to Pro for unlimited receipts and advanced features.</p>
+        <a href="{{ url_for('pricing') }}" class="btn btn-warning">
+            <i class="fas fa-rocket me-2"></i>Upgrade Now
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Recent Receipts -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>Recent Receipts
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if receipts %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-store me-1"></i>Vendor</th>
+                            <th><i class="fas fa-dollar-sign me-1"></i>Amount</th>
+                            <th><i class="fas fa-calendar me-1"></i>Date</th>
+                            <th><i class="fas fa-tag me-1"></i>Category</th>
+                            <th><i class="fas fa-percentage me-1"></i>Tax</th>
+                            <th><i class="fas fa-clock me-1"></i>Uploaded</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in receipts %}
+                        <tr>
+                            <td>
+                                <strong>{{ receipt.vendor or 'Unknown' }}</strong>
+                            </td>
+                            <td>
+                                <span class="text-success fw-bold">${{ "%.2f"|format(receipt.amount) }}</span>
+                            </td>
+                            <td>{{ receipt.date or 'N/A' }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if receipt.category == 'Food' %}bg-success
+                                    {% elif receipt.category == 'Travel' %}bg-primary
+                                    {% elif receipt.category == 'Office' %}bg-info
+                                    {% elif receipt.category == 'Entertainment' %}bg-warning
+                                    {% else %}bg-secondary
+                                    {% endif %}">
+                                    {{ receipt.category or 'Other' }}
+                                </span>
+                            </td>
+                            <td>${{ "%.2f"|format(receipt.tax_amount) }}</td>
+                            <td>
+                                <small class="text-muted">{{ receipt.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                <h5>No receipts yet</h5>
+                <p class="text-muted mb-4">Upload your first receipt to get started with expense tracking</p>
+                <a href="{{ url_for('home') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Upload First Receipt
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Category Breakdown (if receipts exist) -->
+    {% if receipts %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Category Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if receipts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Prepare category data
+const categoryData = {};
+{% for receipt in receipts %}
+const category = '{{ receipt.category or "Other" }}';
+const amount = {{ receipt.amount or 0 }};
+if (categoryData[category]) {
+    categoryData[category] += amount;
+} else {
+    categoryData[category] = amount;
+}
+{% endfor %}
+
+// Create pie chart
+const ctx = document.getElementById('categoryChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: Object.keys(categoryData),
+        datasets: [{
+            data: Object.values(categoryData),
+            backgroundColor: [
+                '#28a745', // Food - green
+                '#007bff', // Travel - blue  
+                '#17a2b8', // Office - cyan
+                '#ffc107', // Entertainment - yellow
+                '#6c757d'  // Other - gray
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

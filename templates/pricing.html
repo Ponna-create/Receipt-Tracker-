@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing - Receipt Scanner{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold">
+            <i class="fas fa-tags text-primary me-3"></i>
+            Simple, Transparent Pricing
+        </h1>
+        <p class="lead">Choose the plan that works for your business</p>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="row justify-content-center">
+        <!-- Free Plan -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-primary">
+                <div class="card-header text-center bg-primary bg-opacity-10">
+                    <h3 class="card-title text-primary">Free</h3>
+                    <div class="display-4 fw-bold">$0</div>
+                    <div class="text-muted">per month</div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Up to 10 receipts per month
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Basic OCR text extraction
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            AI-powered data extraction
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Excel export
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Basic dashboard
+                        </li>
+                        <li class="mb-3 text-muted">
+                            <i class="fas fa-times text-muted me-2"></i>
+                            No API access
+                        </li>
+                        <li class="mb-3 text-muted">
+                            <i class="fas fa-times text-muted me-2"></i>
+                            No bulk upload
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-primary btn-lg w-100">
+                        Get Started Free
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-success shadow-lg">
+                <div class="card-header text-center bg-success text-white position-relative">
+                    <div class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle">
+                        MOST POPULAR
+                    </div>
+                    <h3 class="card-title mt-3">Pro</h3>
+                    <div class="display-4 fw-bold">$19</div>
+                    <div>per month</div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Unlimited receipts</strong>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Advanced OCR with 99% accuracy
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            AI-powered data extraction
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Excel & CSV export
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Advanced analytics dashboard
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Bulk upload (up to 50 at once)
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            API access for integrations
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Priority email support
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <button class="btn btn-success btn-lg w-100" onclick="alert('Payment integration coming soon!')">
+                        <i class="fas fa-rocket me-2"></i>
+                        Upgrade to Pro
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Plan -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-warning">
+                <div class="card-header text-center bg-warning bg-opacity-10">
+                    <h3 class="card-title text-warning">Enterprise</h3>
+                    <div class="display-4 fw-bold">$99</div>
+                    <div class="text-muted">per month</div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Everything in Pro
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Multi-user accounts
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Custom categories
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Advanced reporting
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            White-label option
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Custom integrations
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Dedicated account manager
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            24/7 phone support
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer text-center">
+                    <button class="btn btn-outline-warning btn-lg w-100" onclick="alert('Contact sales for enterprise pricing!')">
+                        Contact Sales
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-center mb-4">Frequently Asked Questions</h2>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            How accurate is the receipt scanning?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Our AI-powered OCR technology achieves 95%+ accuracy on most receipts. For Pro users, we use advanced processing that reaches 99% accuracy. The system continuously learns and improves from each scan.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            What file formats are supported?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            We support JPG, PNG, and JPEG image formats up to 16MB in size. For best results, ensure the receipt is well-lit and clearly visible in the photo.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Can I export my data?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Yes! All plans include Excel export functionality. Pro and Enterprise plans also include CSV export and API access for custom integrations with your accounting software.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                            Is my data secure?
+                        </button>
+                    </h2>
+                    <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Absolutely. We use industry-standard encryption for all data transmission and storage. Your receipt images and extracted data are securely stored and never shared with third parties.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                            Can I cancel anytime?
+                        </button>
+                    </h2>
+                    <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Yes, you can cancel your subscription at any time. Your data will remain accessible until the end of your billing period. You can also export all your data before canceling.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="text-center mt-5 py-5 bg-primary bg-opacity-10 rounded">
+        <h3>Ready to save hours on expense tracking?</h3>
+        <p class="lead mb-4">Join thousands of small business owners who trust Receipt Scanner</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary btn-lg me-3">
+            <i class="fas fa-rocket me-2"></i>Start Free Trial
+        </a>
+        <button class="btn btn-outline-primary btn-lg" onclick="alert('Contact form coming soon!')">
+            <i class="fas fa-phone me-2"></i>Talk to Sales
+        </button>
+    </div>
+</div>
+{% endblock %}

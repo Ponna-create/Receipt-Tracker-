@@ -1,0 +1,2 @@
+# This file ensures the exports directory is created  
+# The directory is needed for storing generated Excel export files
