@@ -58,11 +58,19 @@
                                    accept="image/*" 
                                    required>
                             <div class="form-text">JPG, PNG up to 16MB</div>
+                            
+                            <!-- File upload status -->
+                            <div id="fileStatus" class="mt-2 d-none">
+                                <div class="alert alert-success d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <span id="fileName"></span> uploaded successfully
+                                </div>
+                            </div>
                         </div>
 
-                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100">
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100" disabled>
                             <i class="fas fa-magic me-2"></i>
-                            <span id="btnText">Extract Receipt Data - FREE</span>
+                            <span id="btnText">Select a receipt image first</span>
                             <div class="spinner-border spinner-border-sm ms-2 d-none" id="loadingSpinner"></div>
                         </button>
                     </form>
@@ -198,15 +206,37 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
     }
 });
 
-// File input validation
+// File input validation and status update
 document.getElementById('receipt').addEventListener('change', function(e) {
     const file = e.target.files[0];
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const fileStatus = document.getElementById('fileStatus');
+    const fileName = document.getElementById('fileName');
+    
     if (file) {
         const maxSize = 16 * 1024 * 1024; // 16MB
         if (file.size > maxSize) {
             alert('File too large. Please select a file smaller than 16MB.');
             e.target.value = '';
+            // Reset button state
+            submitBtn.disabled = true;
+            btnText.textContent = 'Select a receipt image first';
+            fileStatus.classList.add('d-none');
+        } else {
+            // Show file uploaded status
+            fileName.textContent = file.name;
+            fileStatus.classList.remove('d-none');
+            
+            // Enable submit button
+            submitBtn.disabled = false;
+            btnText.textContent = 'Extract Receipt Data - FREE';
         }
+    } else {
+        // Reset if no file selected
+        submitBtn.disabled = true;
+        btnText.textContent = 'Select a receipt image first';
+        fileStatus.classList.add('d-none');
     }
 });
 </script>
