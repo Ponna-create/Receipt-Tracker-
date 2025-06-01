@@ -162,7 +162,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
                         <strong>Vendor:</strong> ${result.data.vendor || 'N/A'}
                     </div>
                     <div class="col-md-6">
-                        <strong>Amount:</strong> $${result.data.amount || '0.00'}
+                        <strong>Amount:</strong> ${result.data.currency || 'USD'} ${result.data.amount || '0.00'}
                     </div>
                     <div class="col-md-6">
                         <strong>Date:</strong> ${result.data.date || 'N/A'}
@@ -171,7 +171,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
                         <strong>Category:</strong> ${result.data.category || 'N/A'}
                     </div>
                     <div class="col-12">
-                        <strong>Tax:</strong> $${result.data.tax || '0.00'}
+                        <strong>Tax:</strong> ${result.data.currency || 'USD'} ${result.data.tax || '0.00'}
                     </div>
                 </div>
                 <div class="mt-3">

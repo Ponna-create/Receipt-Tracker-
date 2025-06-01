@@ -200,6 +200,7 @@ def extract_fallback(text):
         return {
             'vendor': vendor,
             'amount': amount,
+            'currency': currency,
             'date': datetime.now().strftime('%Y-%m-%d'),
             'category': category,
             'tax': tax
@@ -210,6 +211,7 @@ def extract_fallback(text):
         return {
             'vendor': 'Unknown Vendor',
             'amount': 0.0,
+            'currency': 'USD',
             'date': datetime.now().strftime('%Y-%m-%d'),
             'category': 'Other',
             'tax': 0.0

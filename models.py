@@ -20,6 +20,7 @@ class Receipt(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     vendor = db.Column(db.String(100))
     amount = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(10), default='USD')
     date = db.Column(db.String(20))
     category = db.Column(db.String(50))
     tax_amount = db.Column(db.Float, default=0.0)

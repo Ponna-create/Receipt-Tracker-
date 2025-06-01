@@ -91,6 +91,7 @@ def upload_receipt():
                     filename=filename,
                     vendor=receipt_data.get('vendor', 'Unknown'),
                     amount=receipt_data.get('amount', 0.0),
+                    currency=receipt_data.get('currency', 'USD'),
                     date=receipt_data.get('date', datetime.now().strftime('%Y-%m-%d')),
                     category=receipt_data.get('category', 'Other'),
                     tax_amount=receipt_data.get('tax', 0.0)
