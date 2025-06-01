@@ -174,13 +174,15 @@
 // Prepare category data
 const categoryData = {};
 {% for receipt in receipts %}
-const category = '{{ receipt.category or "Other" }}';
-const amount = {{ receipt.amount or 0 }};
-if (categoryData[category]) {
-    categoryData[category] += amount;
-} else {
-    categoryData[category] = amount;
-}
+(function() {
+    const category = '{{ receipt.category or "Other" }}';
+    const amount = {{ receipt.amount or 0 }};
+    if (categoryData[category]) {
+        categoryData[category] += amount;
+    } else {
+        categoryData[category] = amount;
+    }
+})();
 {% endfor %}
 
 // Create pie chart
