@@ -278,15 +278,37 @@ def pricing():
 
 @app.errorhandler(413)
 def too_large(e):
-    return jsonify({'error': 'File too large. Maximum size is 16MB.'}), 413
+    app.logger.warning(f"File too large uploaded from {request.remote_addr}")
+    return render_template('error.html', 
+                         message='File too large. Please upload files smaller than 16MB.'), 413
 
 @app.errorhandler(404)
 def not_found(e):
-    return render_template('index.html'), 404
+    app.logger.info(f"404 error: {request.url} from {request.remote_addr}")
+    return render_template('error.html', 
+                         message='Page not found.'), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    return jsonify({'error': 'Internal server error. Please try again.'}), 500
+    app.logger.error(f"500 error: {str(e)} from {request.remote_addr}")
+    return render_template('error.html', 
+                         message='Internal server error. Please try again.'), 500
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    app.logger.warning(f"Rate limit exceeded from {request.remote_addr}")
+    return render_template('error.html', 
+                         message='Too many requests. Please wait a moment and try again.'), 429
+
+@app.errorhandler(401)
+def unauthorized(e):
+    return render_template('error.html', 
+                         message='Authentication required. Please log in.'), 401
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('error.html', 
+                         message='Access denied.'), 403
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

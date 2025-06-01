@@ -38,6 +38,24 @@
                             <i class="fas fa-tags me-1"></i>Pricing
                         </a>
                     </li>
+                    {% if session.user_email %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="return false;">
+                                <i class="fas fa-user me-1"></i>{{ session.user_email }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-1"></i>Logout
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
