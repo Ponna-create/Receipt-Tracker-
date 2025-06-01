@@ -23,7 +23,7 @@ def extract_receipt_data(image_path):
             return extract_fallback("No text detected")
         
         # Use AI to structure the data if OpenAI is available
-        if openai_client:
+        if openai_client and OPENAI_API_KEY != "your-openai-api-key":
             return extract_with_ai(text)
         else:
             return extract_fallback(text)
@@ -36,6 +36,8 @@ def extract_receipt_data(image_path):
 def extract_with_ai(text):
     """Use OpenAI to extract structured data from OCR text"""
     try:
+        if not openai_client:
+            return extract_fallback(text)
         prompt = f"""
 Extract receipt information from this text and return as JSON:
 {text}
@@ -44,6 +46,7 @@ Return only JSON in this exact format:
 {{
     "vendor": "store name",
     "amount": 123.45,
+    "currency": "USD",
     "date": "YYYY-MM-DD",
     "category": "Food/Travel/Office/Entertainment/Other",
     "tax": 12.34
@@ -51,10 +54,12 @@ Return only JSON in this exact format:
 
 Guidelines:
 - If you can't find a value, use null
-- For amount, extract the total amount paid
+- For amount, extract the total amount paid (numeric value only)
+- For currency, detect the currency symbol or code (USD, EUR, GBP, INR, CAD, AUD, etc.)
 - For date, use YYYY-MM-DD format
 - For category, choose from: Food, Travel, Office, Entertainment, Other
 - For tax, extract any tax/GST amount mentioned
+- Common currency symbols: $ (USD), € (EUR), £ (GBP), ₹ (INR), ¥ (JPY), C$ (CAD), A$ (AUD)
 """
         
         # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
@@ -71,7 +76,11 @@ Guidelines:
         )
         
         # Parse AI response
-        result = json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if content:
+            result = json.loads(content)
+        else:
+            return extract_fallback(text)
         
         # Validate and clean data
         if result.get('date'):
@@ -92,6 +101,10 @@ Guidelines:
         valid_categories = ['Food', 'Travel', 'Office', 'Entertainment', 'Other']
         if result.get('category') not in valid_categories:
             result['category'] = 'Other'
+        
+        # Ensure currency is set (default to USD if not detected)
+        if not result.get('currency'):
+            result['currency'] = 'USD'
         
         return result
         
@@ -149,6 +162,23 @@ def extract_fallback(text):
         # If no tax found, estimate based on amount (18% GST common in India)
         if tax == 0.0 and amount > 0:
             tax = round(amount * 0.18, 2)
+        
+        # Basic currency detection
+        currency = 'USD'  # Default
+        currency_patterns = [
+            (r'₹', 'INR'),
+            (r'€', 'EUR'),
+            (r'£', 'GBP'),
+            (r'¥', 'JPY'),
+            (r'C\$', 'CAD'),
+            (r'A\$', 'AUD'),
+            (r'\$', 'USD')  # USD last as fallback
+        ]
+        
+        for pattern, curr in currency_patterns:
+            if re.search(pattern, text):
+                currency = curr
+                break
         
         # Basic category detection based on keywords
         category = 'Other'
