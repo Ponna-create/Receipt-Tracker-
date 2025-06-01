@@ -1,14 +1,17 @@
 import os
 import logging
-from flask import Flask, render_template, request, redirect, jsonify, send_file, url_for, flash
+from flask import Flask, render_template, request, redirect, jsonify, send_file, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from ocr_processor import extract_receipt_data
 from export_utils import create_excel_export
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,6 +38,13 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize the app with the extension
 db.init_app(app)
 
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('exports', exist_ok=True)
@@ -44,6 +54,25 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Authentication helper functions
+def require_auth():
+    """Check if user is authenticated"""
+    return session.get('user_email') is not None
+
+def get_current_user():
+    """Get current user from session"""
+    if not require_auth():
+        return None
+    email = session.get('user_email')
+    return User.query.filter_by(email=email).first()
+
+def create_session(email):
+    """Create user session"""
+    session['user_email'] = email
+    session['login_time'] = datetime.now().isoformat()
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(days=30)
+
 with app.app_context():
     # Import models here
     from models import User, Receipt
@@ -51,21 +80,65 @@ with app.app_context():
 
 @app.route('/')
 def home():
+    if require_auth():
+        user = get_current_user()
+        if user:
+            return redirect(url_for('dashboard', user_id=user.id))
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])
-def upload_receipt():
-    email = request.form.get('email', 'demo@example.com')
+@app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
+def login():
+    """Simple email-based authentication"""
+    if request.method == 'POST':
+        try:
+            email = request.form.get('email', '').strip().lower()
+            if not email or '@' not in email:
+                flash('Please enter a valid email address', 'error')
+                return render_template('login.html')
+            
+            # Get or create user
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(email=email)
+                db.session.add(user)
+                db.session.commit()
+                app.logger.info(f"New user registered: {email}")
+            
+            create_session(email)
+            app.logger.info(f"User logged in: {email}")
+            return redirect(url_for('dashboard', user_id=user.id))
+            
+        except Exception as e:
+            app.logger.error(f"Login error: {str(e)}")
+            flash('Login failed. Please try again.', 'error')
+            return render_template('login.html')
     
-    # Check/create user
-    user = User.query.filter_by(email=email).first()
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout user"""
+    email = session.get('user_email')
+    session.clear()
+    if email:
+        app.logger.info(f"User logged out: {email}")
+    return redirect(url_for('home'))
+
+@app.route('/upload', methods=['POST'])
+@limiter.limit("20 per hour")
+def upload_receipt():
+    # Check authentication
+    if not require_auth():
+        return jsonify({'error': 'Authentication required. Please log in.'}), 401
+    
+    user = get_current_user()
     if not user:
-        user = User(email=email)
-        db.session.add(user)
-        db.session.commit()
+        return jsonify({'error': 'User not found. Please log in again.'}), 401
     
     # Check limits
     if user.plan == 'free' and user.receipt_count >= 10:
+        app.logger.warning(f"User {user.email} hit free plan limit")
         return jsonify({'error': 'Free limit reached. Upgrade to Pro for unlimited receipts.'}), 429
     
     if 'receipt' not in request.files:
@@ -82,74 +155,122 @@ def upload_receipt():
         
         # Extract receipt data using OCR + AI
         try:
+            start_time = time.time()
             receipt_data = extract_receipt_data(filepath)
+            processing_time = time.time() - start_time
+            
+            app.logger.info(f"Receipt processed in {processing_time:.2f}s for user {user.email}")
             
             if receipt_data:
-                # Save to database
-                receipt = Receipt(
-                    user_id=user.id,
-                    filename=filename,
-                    vendor=receipt_data.get('vendor', 'Unknown'),
-                    amount=receipt_data.get('amount', 0.0),
-                    currency=receipt_data.get('currency', 'USD'),
-                    date=receipt_data.get('date', datetime.now().strftime('%Y-%m-%d')),
-                    category=receipt_data.get('category', 'Other'),
-                    tax_amount=receipt_data.get('tax', 0.0)
-                )
-                db.session.add(receipt)
-                
-                # Update user receipt count
-                user.receipt_count += 1
-                db.session.commit()
-                
-                return jsonify({
-                    'success': True,
-                    'data': receipt_data,
-                    'redirect': url_for('dashboard', user_id=user.id)
-                })
+                # Save to database with transaction
+                try:
+                    receipt = Receipt(
+                        user_id=user.id,
+                        filename=filename,
+                        vendor=receipt_data.get('vendor', 'Unknown'),
+                        amount=receipt_data.get('amount', 0.0),
+                        currency=receipt_data.get('currency', 'USD'),
+                        date=receipt_data.get('date', datetime.now().strftime('%Y-%m-%d')),
+                        category=receipt_data.get('category', 'Other'),
+                        tax_amount=receipt_data.get('tax', 0.0)
+                    )
+                    db.session.add(receipt)
+                    
+                    # Update user receipt count
+                    user.receipt_count += 1
+                    db.session.commit()
+                    
+                    app.logger.info(f"Receipt saved successfully for user {user.email}")
+                    
+                    return jsonify({
+                        'success': True,
+                        'data': receipt_data,
+                        'redirect': url_for('dashboard', user_id=user.id)
+                    })
+                    
+                except Exception as db_error:
+                    db.session.rollback()
+                    app.logger.error(f"Database error for user {user.email}: {str(db_error)}")
+                    return jsonify({'error': 'Failed to save receipt data. Please try again.'}), 500
+                    
             else:
+                app.logger.warning(f"Failed to extract data from receipt for user {user.email}")
                 return jsonify({'error': 'Could not process receipt. Please try a clearer image.'}), 422
+                
         except Exception as e:
-            app.logger.error(f"Error processing receipt: {str(e)}")
+            app.logger.error(f"Error processing receipt for user {user.email}: {str(e)}")
+            # Clean up uploaded file on error
+            if os.path.exists(filepath):
+                os.remove(filepath)
             return jsonify({'error': 'Error processing receipt. Please try again.'}), 500
     
     return jsonify({'error': 'Invalid file format. Please upload PNG or JPG.'}), 400
 
 @app.route('/dashboard/<int:user_id>')
 def dashboard(user_id):
-    user = User.query.get_or_404(user_id)
+    # Check authentication
+    if not require_auth():
+        flash('Please log in to access your dashboard', 'error')
+        return redirect(url_for('login'))
     
-    # Get recent receipts
-    receipts = Receipt.query.filter_by(user_id=user_id).order_by(Receipt.created_at.desc()).limit(20).all()
+    current_user = get_current_user()
+    if not current_user or current_user.id != user_id:
+        app.logger.warning(f"Unauthorized dashboard access attempt: user {current_user.email if current_user else 'None'} tried to access user {user_id}")
+        flash('Access denied. You can only view your own dashboard.', 'error')
+        return redirect(url_for('home'))
     
-    # Calculate totals
-    total_amount = db.session.query(db.func.sum(Receipt.amount)).filter_by(user_id=user_id).scalar() or 0
-    total_tax = db.session.query(db.func.sum(Receipt.tax_amount)).filter_by(user_id=user_id).scalar() or 0
-    
-    return render_template('dashboard.html', 
-                         user=user, 
-                         receipts=receipts, 
-                         total_amount=total_amount,
-                         total_tax=total_tax,
-                         user_id=user_id)
+    try:
+        # Get recent receipts with error handling
+        receipts = Receipt.query.filter_by(user_id=user_id).order_by(Receipt.created_at.desc()).limit(20).all()
+        
+        # Calculate totals safely
+        total_amount = db.session.query(db.func.sum(Receipt.amount)).filter_by(user_id=user_id).scalar() or 0
+        total_tax = db.session.query(db.func.sum(Receipt.tax_amount)).filter_by(user_id=user_id).scalar() or 0
+        
+        app.logger.info(f"Dashboard accessed by user {current_user.email}")
+        
+        return render_template('dashboard.html', 
+                             user=current_user, 
+                             receipts=receipts, 
+                             total_amount=total_amount,
+                             total_tax=total_tax,
+                             user_id=user_id)
+                             
+    except Exception as e:
+        app.logger.error(f"Dashboard error for user {current_user.email}: {str(e)}")
+        flash('Error loading dashboard. Please try again.', 'error')
+        return redirect(url_for('home'))
 
 @app.route('/export/<int:user_id>')
+@limiter.limit("5 per minute")
 def export_data(user_id):
-    user = User.query.get_or_404(user_id)
-    receipts = Receipt.query.filter_by(user_id=user_id).order_by(Receipt.date.desc()).all()
+    # Check authentication
+    if not require_auth():
+        flash('Please log in to export data', 'error')
+        return redirect(url_for('login'))
     
-    if receipts:
-        try:
+    current_user = get_current_user()
+    if not current_user or current_user.id != user_id:
+        app.logger.warning(f"Unauthorized export attempt: user {current_user.email if current_user else 'None'} tried to export user {user_id} data")
+        flash('Access denied. You can only export your own data.', 'error')
+        return redirect(url_for('home'))
+    
+    try:
+        receipts = Receipt.query.filter_by(user_id=user_id).order_by(Receipt.date.desc()).all()
+        
+        if receipts:
             filename = create_excel_export(receipts, user_id)
+            app.logger.info(f"Export created for user {current_user.email}: {len(receipts)} receipts")
             return send_file(filename, as_attachment=True, 
                            download_name=f'expenses_{datetime.now().strftime("%Y%m")}.xlsx')
-        except Exception as e:
-            app.logger.error(f"Error creating export: {str(e)}")
-            flash('Error creating export file', 'error')
+        else:
+            flash('No receipts to export', 'info')
             return redirect(url_for('dashboard', user_id=user_id))
-    
-    flash('No receipts to export', 'info')
-    return redirect(url_for('dashboard', user_id=user_id))
+            
+    except Exception as e:
+        app.logger.error(f"Export error for user {current_user.email}: {str(e)}")
+        flash('Error creating export file. Please try again.', 'error')
+        return redirect(url_for('dashboard', user_id=user_id))
 
 @app.route('/pricing')
 def pricing():
