@@ -12,14 +12,13 @@ from export_utils import create_excel_export
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import time
+from db import db
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
 class Base(DeclarativeBase):
     pass
-
-db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
