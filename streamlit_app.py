@@ -1,12 +1,14 @@
 import streamlit as st
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, session
 from models import User, Receipt
 from ocr_processor import extract_receipt_data
 from export_utils import create_excel_export
 import sqlite3
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
 # Initialize Flask app for session management
 flask_app = Flask(__name__)
@@ -18,6 +20,12 @@ flask_app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
+
+# Set up SQLAlchemy engine and session for Streamlit
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///receipts.db")
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(bind=engine)
+session_db = Session()
 
 # Ensure upload directory exists
 os.makedirs('static/uploads', exist_ok=True)
@@ -36,7 +44,7 @@ def get_current_user():
     if not require_auth():
         return None
     email = session.get('user_email')
-    return User.query.filter_by(email=email).first()
+    return session_db.query(User).filter_by(email=email).first()
 
 def create_session(email):
     session['user_email'] = email
@@ -53,11 +61,11 @@ if 'user_email' not in st.session_state:
     email = st.text_input("Email")
     if st.button("Login"):
         if email and '@' in email:
-            user = User.query.filter_by(email=email).first()
+            user = session_db.query(User).filter_by(email=email).first()
             if not user:
                 user = User(email=email)
-                db.session.add(user)
-                db.session.commit()
+                session_db.add(user)
+                session_db.commit()
             create_session(email)
             st.session_state.user_email = email
             st.experimental_rerun()
@@ -82,7 +90,7 @@ else:
                 f.write(uploaded_file.getbuffer())
             receipt_data = extract_receipt_data(filepath)
             if receipt_data:
-                user = get_current_user()
+                user = session_db.query(User).filter_by(email=st.session_state.user_email).first()
                 receipt = Receipt(
                     user_id=user.id,
                     filename=filename,
@@ -93,9 +101,10 @@ else:
                     category=receipt_data.get('category', 'Other'),
                     tax_amount=receipt_data.get('tax', 0.0)
                 )
-                db.session.add(receipt)
-                user.receipt_count += 1
-                db.session.commit()
+                session_db.add(receipt)
+                if hasattr(user, 'receipt_count'):
+                    user.receipt_count += 1
+                session_db.commit()
                 st.success("Receipt uploaded and processed successfully!")
             else:
                 st.error("Could not process receipt. Please try a clearer image.")
@@ -104,9 +113,9 @@ else:
 
     # Display Receipts
     st.header("Your Receipts")
-    user = get_current_user()
+    user = session_db.query(User).filter_by(email=st.session_state.user_email).first()
     if user:
-        receipts = Receipt.query.filter_by(user_id=user.id).all()
+        receipts = session_db.query(Receipt).filter_by(user_id=user.id).all()
         if receipts:
             data = []
             for receipt in receipts:
@@ -125,9 +134,9 @@ else:
     
     # Export Data
     if st.button("Export Data"):
-        user = get_current_user()
+        user = session_db.query(User).filter_by(email=st.session_state.user_email).first()
         if user:
-            receipts = Receipt.query.filter_by(user_id=user.id).all()
+            receipts = session_db.query(Receipt).filter_by(user_id=user.id).all()
             if receipts:
                 data = []
                 for receipt in receipts:
