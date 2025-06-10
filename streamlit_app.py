@@ -70,7 +70,7 @@ else:
         session.clear()
         st.session_state.clear()
         st.experimental_rerun()
-
+    
     # Upload Receipt
     st.header("Upload Receipt")
     uploaded_file = st.file_uploader("Choose a receipt image", type=ALLOWED_EXTENSIONS)
@@ -122,7 +122,7 @@ else:
             st.dataframe(df)
         else:
             st.write("No receipts found.")
-
+    
     # Export Data
     if st.button("Export Data"):
         user = get_current_user()
@@ -148,7 +148,4 @@ else:
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
             else:
-                st.write("No receipts to export.")
-
-if __name__ == "__main__":
-    st.run() 
+                st.write("No receipts to export.") 
