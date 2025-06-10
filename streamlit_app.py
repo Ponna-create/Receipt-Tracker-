@@ -9,7 +9,6 @@ from export_utils import create_excel_export
 import sqlite3
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-import matplotlib.pyplot as plt
 
 # Initialize Flask app for session management
 flask_app = Flask(__name__)
@@ -109,14 +108,6 @@ if 'user_email' not in st.session_state or not st.session_state.user_email:
         st.markdown("### Your Processed Receipts (This Session)")
         df = pd.DataFrame(st.session_state['free_receipts'])
         st.dataframe(df, use_container_width=True)
-        # Pie chart for Amount by Category
-        if not df.empty and 'category' in df.columns and 'amount' in df.columns:
-            cat_group = df.groupby('category')['amount'].sum()
-            if not cat_group.empty and cat_group.sum() > 0:
-                fig, ax = plt.subplots()
-                ax.pie(cat_group, labels=cat_group.index, autopct='%1.1f%%', startangle=90)
-                ax.set_title('Amount by Category')
-                st.pyplot(fig)
         # Download Excel
         if st.button("Download Excel of These Receipts"):
             excel_file = create_excel_export(df.to_dict(orient="records"), "free_user")
@@ -180,14 +171,6 @@ else:
                 })
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
-            # Pie chart for Amount by Category
-            if not df.empty and 'Category' in df.columns and 'Amount' in df.columns:
-                cat_group = df.groupby('Category')['Amount'].sum()
-                if not cat_group.empty and cat_group.sum() > 0:
-                    fig, ax = plt.subplots()
-                    ax.pie(cat_group, labels=cat_group.index, autopct='%1.1f%%', startangle=90)
-                    ax.set_title('Amount by Category')
-                    st.pyplot(fig)
             # Download Excel
             if st.button("Download Excel of All Receipts"):
                 excel_file = create_excel_export(df.to_dict(orient="records"), user.email)
