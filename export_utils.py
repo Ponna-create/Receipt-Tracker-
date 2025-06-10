@@ -3,19 +3,31 @@ from datetime import datetime
 import os
 
 def create_excel_export(receipts, user_id):
-    """Create Excel export from receipts data"""
+    """Create Excel export from receipts data. Handles both Receipt objects and dicts."""
     try:
         # Convert receipts to list of dictionaries
         receipts_data = []
         for receipt in receipts:
-            receipts_data.append({
-                'Vendor': receipt.vendor,
-                'Amount': receipt.amount,
-                'Date': receipt.date,
-                'Category': receipt.category,
-                'Tax': receipt.tax_amount,
-                'Uploaded': receipt.created_at.strftime('%Y-%m-%d %H:%M')
-            })
+            if isinstance(receipt, dict):
+                # For free users (dicts)
+                receipts_data.append({
+                    'Vendor': receipt.get('vendor', receipt.get('Vendor', '')),
+                    'Amount': receipt.get('amount', receipt.get('Amount', 0)),
+                    'Date': receipt.get('date', receipt.get('Date', '')),
+                    'Category': receipt.get('category', receipt.get('Category', '')),
+                    'Tax': receipt.get('tax', receipt.get('Tax', 0)),
+                    'Uploaded': receipt.get('uploaded', receipt.get('Uploaded', datetime.now().strftime('%Y-%m-%d %H:%M')))
+                })
+            else:
+                # For logged-in users (Receipt objects)
+                receipts_data.append({
+                    'Vendor': receipt.vendor,
+                    'Amount': receipt.amount,
+                    'Date': receipt.date,
+                    'Category': receipt.category,
+                    'Tax': receipt.tax_amount,
+                    'Uploaded': receipt.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(receipt, 'created_at') else ''
+                })
         
         # Convert to DataFrame
         df = pd.DataFrame(receipts_data)
@@ -55,7 +67,7 @@ def create_excel_export(receipts, user_id):
                 monthly_data = df[df['Vendor'] != 'TOTAL'].copy()
                 if not monthly_data.empty:
                     # Convert date strings to datetime for grouping
-                    monthly_data['Month'] = pd.to_datetime(monthly_data['Date']).dt.to_period('M')
+                    monthly_data['Month'] = pd.to_datetime(monthly_data['Date'], errors='coerce').dt.to_period('M')
                     monthly_summary = monthly_data.groupby('Month')['Amount'].sum().reset_index()
                     monthly_summary['Month'] = monthly_summary['Month'].astype(str)
                     monthly_summary.to_excel(writer, sheet_name='Monthly Summary', index=False)
@@ -71,6 +83,9 @@ def create_excel_export(receipts, user_id):
         with open(filename, 'w') as f:
             f.write('Vendor,Amount,Date,Category,Tax,Uploaded\n')
             for receipt in receipts:
-                f.write(f'"{receipt.vendor}",{receipt.amount},{receipt.date},{receipt.category},{receipt.tax_amount},{receipt.created_at.strftime("%Y-%m-%d %H:%M")}\n')
+                if isinstance(receipt, dict):
+                    f.write(f'"{receipt.get("vendor", receipt.get("Vendor", ""))}",{receipt.get("amount", receipt.get("Amount", 0))},{receipt.get("date", receipt.get("Date", ""))},{receipt.get("category", receipt.get("Category", ""))},{receipt.get("tax", receipt.get("Tax", 0))},{receipt.get("uploaded", receipt.get("Uploaded", datetime.now().strftime("%Y-%m-%d %H:%M")))}\n')
+                else:
+                    f.write(f'"{receipt.vendor}",{receipt.amount},{receipt.date},{receipt.category},{receipt.tax_amount},{receipt.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(receipt, "created_at") else ""}\n')
         
         return filename
