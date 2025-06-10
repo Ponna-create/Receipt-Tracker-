@@ -36,28 +36,16 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Authentication helper functions
-def require_auth():
-    return session.get('user_email') is not None
-
-def get_current_user():
-    if not require_auth():
-        return None
-    email = session.get('user_email')
-    return session_db.query(User).filter_by(email=email).first()
-
-def create_session(email):
-    session['user_email'] = email
-    session['login_time'] = datetime.now().isoformat()
-    session.permanent = True
-    flask_app.permanent_session_lifetime = timedelta(days=30)
-
 # Streamlit UI
 st.title("Receipt Tracker")
 
+# Initialize free upload counter in session state
+if 'free_uploads' not in st.session_state:
+    st.session_state['free_uploads'] = 0
+
 # Login
-if 'user_email' not in st.session_state:
-    st.header("Login")
+if 'user_email' not in st.session_state or not st.session_state.user_email:
+    st.header("Login (optional)")
     email = st.text_input("Email")
     if st.button("Login"):
         if email and '@' in email:
@@ -66,25 +54,46 @@ if 'user_email' not in st.session_state:
                 user = User(email=email)
                 session_db.add(user)
                 session_db.commit()
-            create_session(email)
             st.session_state.user_email = email
             st.experimental_rerun()
         else:
             st.error("Please enter a valid email address.")
+    st.info(f"You can upload and process {5 - st.session_state['free_uploads']} receipts for free without logging in.")
+    
+    # Free uploads section
+    st.header("Free Upload (No Login Required)")
+    if st.session_state['free_uploads'] < 5:
+        uploaded_file = st.file_uploader("Choose a receipt image (PNG, JPG, JPEG)", type=ALLOWED_EXTENSIONS, key='free_upload')
+        if uploaded_file is not None:
+            if allowed_file(uploaded_file.name):
+                filename = f"free_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_file.name}"
+                filepath = os.path.join('static/uploads', filename)
+                with open(filepath, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                receipt_data = extract_receipt_data(filepath)
+                if receipt_data:
+                    st.session_state['free_uploads'] += 1
+                    st.success(f"Receipt processed successfully! You have {5 - st.session_state['free_uploads']} free uploads left.")
+                    st.write(receipt_data)
+                else:
+                    st.error("Could not process receipt. Please try a clearer image.")
+            else:
+                st.error("File type not allowed. Please upload a PNG, JPG, or JPEG.")
+    else:
+        st.warning("You have reached the free upload limit. Please log in to continue using the app.")
 else:
     st.header("Dashboard")
     st.write(f"Logged in as: {st.session_state.user_email}")
     if st.button("Logout"):
-        session.clear()
-        st.session_state.clear()
+        st.session_state.user_email = None
         st.experimental_rerun()
     
-    # Upload Receipt
+    # Upload Receipt (Logged-in user)
     st.header("Upload Receipt")
-    uploaded_file = st.file_uploader("Choose a receipt image", type=ALLOWED_EXTENSIONS)
+    uploaded_file = st.file_uploader("Choose a receipt image", type=ALLOWED_EXTENSIONS, key='loggedin_upload')
     if uploaded_file is not None:
         if allowed_file(uploaded_file.name):
-            filename = secure_filename(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_file.name}")
+            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_file.name}"
             filepath = os.path.join('static/uploads', filename)
             with open(filepath, "wb") as f:
                 f.write(uploaded_file.getbuffer())
